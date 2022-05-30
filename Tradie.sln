@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2006
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32414.318
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tradie", "Tradie.csproj", "{DBB3C794-72B7-4D5A-99C7-E7E59136C42D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tradie", "Tradie.csproj", "{DBB3C794-72B7-4D5A-99C7-E7E59136C42D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7A8F74F9-6F6F-49DD-ACE3-8D79B25F3F74}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

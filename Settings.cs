@@ -17,6 +17,8 @@ namespace Tradie
             YourItemStartingLocationX = new RangeNode<int>(966, 0, 2560);
             YourItemStartingLocationY = new RangeNode<int>(863, 0, 2560);
             YourItemsAscending = new ToggleNode(true);
+            UseCoreNPCTrade = new ToggleNode(true);
+            UseCoreYourItems = new ToggleNode(true);
             YourItemTextColor = Color.LightBlue;
             YourItemBackgroundColor = Color.Black;
             YourItemsImageLeftOrRight = new ToggleNode(true);
@@ -28,11 +30,24 @@ namespace Tradie
             TheirItemBackgroundColor = Color.Black;
             TheirItemsImageLeftOrRight = new ToggleNode(false);
         }
+
+        //[Menu("Auto Search")]
+        //public ButtonNode AutoSearch { get; set; } = new ButtonNode();
+
         [Menu("NPC Trade Window Index #")]
         public RangeNode<int> NPCTradeIndex { get; set; } = new RangeNode<int>(93, 0, 400);
+        [Menu("Use core NPC Trade Window")]
+
+        public ToggleNode UseCoreNPCTrade { get; set; } = new ToggleNode(true);
+
 
         [Menu("Player Trade Window Index #")] 
         public RangeNode<int> PlayerTradeIndex { get; set; } = new RangeNode<int>(94, 0, 400);
+
+        [Menu("Use core Player Trade Window")]
+
+        public ToggleNode UseCoreYourItems { get; set; } = new ToggleNode(true);
+
 
         [Menu("Image Size")]
         public RangeNode<int> ImageSize { get; set; }
@@ -40,6 +55,11 @@ namespace Tradie
         public RangeNode<int> TextSize { get; set; }
         [Menu("Spacing", "Spacing between image and text")]
         public RangeNode<int> Spacing { get; set; }
+
+        [Menu("Use horizontal view")]
+
+        public ToggleNode UseHorizon { get; set; } = new ToggleNode(true);
+
         [Menu("Your Trade Items", 1001)]
         public EmptyNode Blank1 { get; set; }
         [Menu("X", 10011, 1001)]

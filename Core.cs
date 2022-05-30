@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using ExileCore.PoEMemory.MemoryObjects;
 
 namespace Tradie
 {
@@ -16,10 +17,11 @@ namespace Tradie
     {
         private readonly List<string> _whiteListedPaths = new List<string>
         {
-                "Art/2DItems/Currency"
-
+                "Art/2DItems/Currency",
+                "Art/2DItems/Divination",
                 //TODO, maps are loading strange and causing too many draw issues
-                //"Art/2DItems/Maps"
+                "Art/2DItems/Maps",
+
         };
 
         private List<string> _initializedImageList = new List<string>();
@@ -34,15 +36,33 @@ namespace Tradie
 
         private void ShowNpcTradeItems()
         {
-            if (!NpcTradeWindowVisible)
+            if (!NpcTradeWindowVisible && Settings.UseCoreNPCTrade == false)
                 return;
-            var npcTradingWindow = GetNpcTradeWindow();
-            var tradingItems = GetItemsInTradingWindow(npcTradingWindow);
+
+            SellWindowHideout npcTradingWindow = Settings.UseCoreNPCTrade ? GameController.Game.IngameState.IngameUi.SellWindowHideout
+                :GetNpcTradeWindow() as SellWindowHideout
+                ;
+
+            if (npcTradingWindow == null || npcTradingWindow.IsVisible == false)
+            {
+                return;
+            }
+
+            var tradingItems = GetItemsInSellWindow(npcTradingWindow);
+
+
+
             var ourData = new ItemDisplay
             {
                 Items = GetItemObjects(tradingItems.ourItems).OrderBy(item => item.Path),
-                X = Settings.YourItemStartingLocationX,
-                Y = Settings.YourItemStartingLocationY,
+                
+                X = Settings.UseHorizon ? 
+                    (int)npcTradingWindow.YourOffer.GetClientRect().TopLeft.X 
+                    : Settings.YourItemStartingLocationX,
+
+                Y = Settings.UseHorizon ? 
+                    (int)npcTradingWindow.YourOffer.GetClientRect().TopLeft.Y - Settings.ImageSize 
+                    : Settings.YourItemStartingLocationY,
                 TextSize = Settings.TextSize,
                 TextColor = Settings.YourItemTextColor,
                 BackgroundColor = Settings.YourItemBackgroundColor,
@@ -55,8 +75,9 @@ namespace Tradie
             var theirData = new ItemDisplay
             {
                 Items = GetItemObjects(tradingItems.theirItems).OrderBy(item => item.Path),
-                X = Settings.TheirItemStartingLocationX,
-                Y = Settings.TheirItemStartingLocationY,
+                X =Settings.UseHorizon ?  (int)npcTradingWindow.OtherOffer.GetClientRect().TopLeft.X
+                    : Settings.TheirItemStartingLocationX,
+                Y =Settings.UseHorizon ?  (int)npcTradingWindow.OtherOffer.GetClientRect().TopLeft.Y - Settings.ImageSize: Settings.TheirItemStartingLocationY,
                 TextSize = Settings.TextSize,
                 TextColor = Settings.TheirItemTextColor,
                 BackgroundColor = Settings.TheirItemBackgroundColor,
@@ -74,15 +95,27 @@ namespace Tradie
 
         private void ShowPlayerTradeItems()
         {
-            if (!TradingWindowVisible)
+            
+
+            if (!TradingWindowVisible && Settings.UseCoreYourItems == false)
                 return;
-            var tradingWindow = GetTradingWindow();
+
+            TradeWindow tradingWindow = Settings.UseCoreYourItems ? GameController.Game.IngameState.IngameUi.TradeWindow
+                :GetTradingWindow() as TradeWindow 
+                ;
+            if (tradingWindow == null || tradingWindow.IsVisible == false)
+            {
+                return;
+            }
+
             var tradingItems = GetItemsInTradingWindow(tradingWindow);
             var ourData = new ItemDisplay
             {
                 Items = GetItemObjects(tradingItems.ourItems).OrderBy(item => item.Path),
-                X = Settings.YourItemStartingLocationX,
-                Y = Settings.YourItemStartingLocationY,
+                X =Settings.UseHorizon ? (int)tradingWindow.OtherOfferElement.GetClientRect().TopLeft.X
+                    :  Settings.YourItemStartingLocationX,
+                Y =Settings.UseHorizon ? (int)tradingWindow.OtherOfferElement.GetClientRect().TopLeft.Y - Settings.ImageSize
+                    :   Settings.YourItemStartingLocationY,
                 TextSize = Settings.TextSize,
                 TextColor = Settings.YourItemTextColor,
                 BackgroundColor = Settings.YourItemBackgroundColor,
@@ -95,8 +128,10 @@ namespace Tradie
             var theirData = new ItemDisplay
             {
                 Items = GetItemObjects(tradingItems.theirItems).OrderBy(item => item.Path),
-                X = Settings.TheirItemStartingLocationX,
-                Y = Settings.TheirItemStartingLocationY,
+                X =Settings.UseHorizon ? (int)tradingWindow.YourOfferElement.GetClientRect().TopLeft.X
+                    :   Settings.TheirItemStartingLocationX,
+                Y =Settings.UseHorizon ? (int)tradingWindow.YourOfferElement.GetClientRect().TopLeft.Y - Settings.ImageSize
+                    :   Settings.TheirItemStartingLocationY,
                 TextSize = Settings.TextSize,
                 TextColor = Settings.TheirItemTextColor,
                 BackgroundColor = Settings.TheirItemBackgroundColor,
@@ -117,35 +152,64 @@ namespace Tradie
             const string symbol = "-";
             var counter = 0;
             var newColor = data.BackgroundColor;
-            newColor.A = (byte) data.BackgroundTransparency;
+            newColor.A = (byte)data.BackgroundTransparency;
             var maxCount = data.Items.Max(i => i.Amount);
+            var lengthText = Graphics.MeasureText(symbol + " " + maxCount, data.TextSize).X;
 
-            var background = new RectangleF(data.LeftAlignment ? data.X : data.X + data.ImageSize, data.Y,
-                data.LeftAlignment
-                    ? +data.ImageSize + data.Spacing + 3 +
-                      Graphics.MeasureText(symbol + " " + maxCount, data.TextSize).X
-                    : -data.ImageSize - data.Spacing - 3 -
-                      Graphics.MeasureText(symbol + " " + maxCount, data.TextSize).X,
-                data.Ascending ? -data.ImageSize * data.Items.Count() : data.ImageSize * data.Items.Count());
-
-            Graphics.DrawBox(background, newColor);
-
-            foreach (var ourItem in data.Items)
+            if (Settings.UseHorizon)
             {
-                counter++;
-                var imageBox = new RectangleF(data.X,
-                    data.Ascending
-                        ? data.Y - counter * data.ImageSize
-                        : data.Y - data.ImageSize + counter * data.ImageSize,
-                    data.ImageSize, data.ImageSize);
+                var background = new RectangleF(data.X, data.Y,
+                    (data.ImageSize + data.Spacing * 2 + lengthText) * data.Items.Count(),
+                    data.ImageSize);
 
-                Graphics.DrawImageGui(ourItem.Path, imageBox, new RectangleF(0, 0, 1, 1));
+                Graphics.DrawBox(background, newColor);
 
-                Graphics.DrawText(data.LeftAlignment ? $"{symbol} {ourItem.Amount}" : $"{ourItem.Amount} {symbol}",
-                    new Vector2(data.LeftAlignment ? data.X + data.ImageSize + data.Spacing : data.X - data.Spacing,
-                        imageBox.Center.Y - data.TextSize / 2 - 3), data.TextColor,
-                    data.LeftAlignment ? FontAlign.Left : FontAlign.Right);
+                foreach (var ourItem in data.Items)
+                {
+                    var imageBox = new RectangleF(
+                        data.X + counter * (data.ImageSize + data.Spacing * 2 + lengthText),
+                        data.Y,
+                        data.ImageSize, data.ImageSize);
 
+                    Graphics.DrawImageGui(ourItem.Path, imageBox, new RectangleF(0, 0, 1, 1));
+
+                    Graphics.DrawText($"{symbol} {ourItem.Amount}",
+                        new Vector2(
+                            imageBox.Center.X + imageBox.Width / 2 + data.Spacing / 2,
+                            imageBox.Center.Y - data.TextSize / 2 - 3)
+                        , data.TextColor,
+                        FontAlign.Left);
+                    counter++;
+                }
+            }
+            else
+            {
+                var background = new RectangleF(data.LeftAlignment ? data.X : data.X + data.ImageSize, data.Y,
+                    data.LeftAlignment
+                        ? +data.ImageSize + data.Spacing + 3 +
+                          Graphics.MeasureText(symbol + " " + maxCount, data.TextSize).X
+                        : -data.ImageSize - data.Spacing - 3 -
+                          Graphics.MeasureText(symbol + " " + maxCount, data.TextSize).X,
+                    data.Ascending ? -data.ImageSize * data.Items.Count() : data.ImageSize * data.Items.Count());
+
+                Graphics.DrawBox(background, newColor);
+
+                foreach (var ourItem in data.Items)
+                {
+                    counter++;
+                    var imageBox = new RectangleF(data.X,
+                        data.Ascending
+                            ? data.Y - counter * data.ImageSize
+                            : data.Y - data.ImageSize + counter * data.ImageSize,
+                        data.ImageSize, data.ImageSize);
+
+                    Graphics.DrawImageGui(ourItem.Path, imageBox, new RectangleF(0, 0, 1, 1));
+
+                    Graphics.DrawText(data.LeftAlignment ? $"{symbol} {ourItem.Amount}" : $"{ourItem.Amount} {symbol}",
+                        new Vector2(data.LeftAlignment ? data.X + data.ImageSize + data.Spacing : data.X - data.Spacing,
+                            imageBox.Center.Y - data.TextSize / 2 - 3), data.TextColor,
+                        data.LeftAlignment ? FontAlign.Left : FontAlign.Right);
+                }
             }
         }
 
@@ -191,7 +255,7 @@ namespace Tradie
             }
         }
 
-        private (List<NormalInventoryItem> ourItems, List<NormalInventoryItem> theirItems) GetItemsInTradingWindow(Element tradingWindow)
+        private (List<NormalInventoryItem> ourItems, List<NormalInventoryItem> theirItems) GetItemsInSellWindow(SellWindowHideout tradingWindow)
         {
             var ourItems = new List<NormalInventoryItem>();
             var theirItems = new List<NormalInventoryItem>();
@@ -200,14 +264,58 @@ namespace Tradie
                 return (ourItems, theirItems);
             }
 
-            var ourItemsElement = tradingWindow.GetChildAtIndex(0);
-            var theirItemsElement = tradingWindow.GetChildAtIndex(1);
+            var ourItemsElement = tradingWindow.YourOffer;
+            var theirItemsElement = tradingWindow.OtherOffer;
 
 
             // We are skipping the first, since it's a Element ("Place items you want to trade here") that we don't need.
             // 
             // skipping the first item as its a strange object added after 3.3 Incursion
-            foreach (var ourElement in ourItemsElement.Children.Skip(2))
+            foreach (var ourElement in ourItemsElement.Children.Skip(1))
+            {
+                var normalInventoryItem = ourElement.AsObject<NormalInventoryItem>();
+                if (normalInventoryItem == null)
+                {
+                    LogMessage("Tradie: OurItem was null!", 5);
+                    throw new Exception("Tradie: OurItem was null!");
+                }
+
+                ourItems.Add(normalInventoryItem);
+            }
+
+            // skipping the first item as its a strange object added after 3.3 Incursion
+            foreach (var theirElement in theirItemsElement.Children.Skip(1))
+            {
+                var normalInventoryItem = theirElement.AsObject<NormalInventoryItem>();
+                if (normalInventoryItem == null)
+                {
+                    LogMessage("Tradie: OurItem was null!", 5);
+                    throw new Exception("Tradie: OurItem was null!");
+                }
+
+                theirItems.Add(normalInventoryItem);
+            }
+
+            return (ourItems, theirItems);
+        }
+        
+        private (List<NormalInventoryItem> ourItems, List<NormalInventoryItem> theirItems) GetItemsInTradingWindow(TradeWindow tradingWindow)
+        {
+            var ourItems = new List<NormalInventoryItem>();
+            var theirItems = new List<NormalInventoryItem>();
+            if (tradingWindow.ChildCount < 2)
+            {
+                return (ourItems, theirItems);
+            }
+
+            var ourItemsElement = tradingWindow.OtherOfferElement;
+            var theirItemsElement = tradingWindow.YourOfferElement;
+
+
+            // We are skipping the first, since it's a Element ("Place items you want to trade here") that we don't need.
+            // 
+            // skipping the first item as its a strange object added after 3.3 Incursion
+            foreach (var ourElement in ourItemsElement.Children.Skip(1))
             {
                 var normalInventoryItem = ourElement.AsObject<NormalInventoryItem>();
                 if (normalInventoryItem == null)
@@ -243,7 +351,7 @@ namespace Tradie
             foreach (var normalInventoryItem in normalInventoryItems)
                 try
                 {
-                    if (normalInventoryItem.Item == null) continue;
+                    if (normalInventoryItem.Item == null || normalInventoryItem.Item.Address < 1) continue;
                     var metaData = normalInventoryItem.Item.GetComponent<RenderItem>().ResourcePath;
                     if (metaData.Equals("")) continue;
                     if (!IsWhitelisted(metaData))
