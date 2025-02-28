@@ -15,10 +15,10 @@ Also, there are features that I neither implemented nor plan to implement.
 
 | Item | Icon |
 | --- | --- |
-| Exalted Orb | ![Exalted Orb](./images/CurrencyAddModToRare.png) |
-| Chaos Orb | ![Chaos Orb](./images/CurrencyRerollRare.png) |
-| Divine Orb | ![Divine Orb](./images/CurrencyModValues.png) |
-| Mirror of Kalandra | ![Mirror of Kalandra](./images/CurrencyDuplicate.png) |
+| Exalted Orb | <img src="./images/CurrencyAddModToRare.png" width="50" height="50"> |
+| Chaos Orb | <img src="./images/CurrencyRerollRare.png" width="50" height="50"> |
+| Divine Orb | <img src="./images/CurrencyModValues.png" width="50" height="50"> |
+| Mirror of Kalandra | <img src="./images/CurrencyDuplicate.png" width="50" height="50"> |
 
 ### How to add more items to the whitelist
 Not
